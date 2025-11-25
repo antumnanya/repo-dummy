@@ -1,0 +1,8 @@
+  if value > 0:
+            btn.config(text=str(value), fg=COLOR_MAP.get(value, "black"), bg="#DDDDDD")
+        else:
+            btn.config(text="", bg="#DDDDDD")
+            self.expand(r, c)
+
+        if self.check_win():
+            self.game_over(True)
