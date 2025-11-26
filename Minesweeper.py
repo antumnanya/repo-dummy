@@ -33,6 +33,34 @@ except Exception:
     HAS_PLAYSOUND = False
 
 # ---------------- Config ----------------
+HIGHSCORE_FILE = 'mines_highscores.json'
+JUMPSCARE_CHANCE = 0.04  # 4% chance per left-click to trigger jumpscare
+VALAK_IMAGE_PATH = '/mnt/data/valak.jpg'  # uploaded file path (already in container)
+JUMPSCARE_SOUND_CANDIDATES = ['./jumpscare.wav', './jumpscare.mp3']  # search order
+
+DEFAULTS = {
+    'Easy': (9, 9, 10),
+    'Medium': (16, 16, 40),
+    'Hard': (16, 30, 99)
+}
+
+ICONS = {
+    'bomb': '💣',
+    'flag': '🚩',
+    'hidden': '■',
+    'question': '?'
+}
+
+COLOR_MAP = {
+    1: "#0000FF",   # biru
+    2: "#008000",   # hijau
+    3: "#FF0000",   # merah
+    4: "#000080",   # biru navy
+    5: "#800000",   # maroon
+    6: "#008080",   # teal
+    7: "#000000",   # hitam
+    8: "#808080",   # abu
+}
 
 # ---------------- Helpers ----------------
 def find_sound():
