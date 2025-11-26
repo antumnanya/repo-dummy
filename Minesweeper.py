@@ -10,8 +10,7 @@ Refactored Minesweeper GUI — Full version (refactor B)
 Run: python minesweeper_gui_full_refactor.py
 """
 
-from Menu_Minesweaper(Gideon) import init, setup_ui, change_difficulty, show_new_game_dialog 
-import tkinter as t
+import tkinter as tk
 from tkinter import simpledialog, messagebox
 import random
 import time
@@ -47,6 +46,9 @@ COLOR_MAP = {
 
 # ---------------- Minesweeper Class ----------------
 class Minesweeper:
+
+#Bagian Main Menu - Gideon
+
     def __init__(self, master):
         self.master = master
         self.master.title('Minesweeper')
@@ -126,6 +128,8 @@ class Minesweeper:
                 messagebox.showerror('Bad input', 'Could not parse custom difficulty')
                 return
         self.new_game()
+
+#Bagian Mekanik Game - Excel
 
     def new_game(self):
         # reset game state
@@ -276,6 +280,8 @@ class Minesweeper:
         self.mine_label.config(text=f'Mines: {self.flags_left}')
         # consume event
         return 'break'
+
+# Ban Ending - Kobar
 
     def check_win(self):
         # win if all non-mine cells revealed
