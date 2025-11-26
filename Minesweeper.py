@@ -10,7 +10,8 @@ Refactored Minesweeper GUI — Full version (refactor B)
 Run: python minesweeper_gui_full_refactor.py
 """
 
-import tkinter as tk
+from Menu_Minesweaper(Gideon) import __init__, setup_ui, change_difficulty, show_new_game_dialog 
+import tkinter as t
 from tkinter import simpledialog, messagebox
 import random
 import time
