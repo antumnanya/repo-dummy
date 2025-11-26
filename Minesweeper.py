@@ -1,17 +1,15 @@
 """
-Minesweeper GUI (single-file) + Valak jumpscare (image + optional sound)
-Features:
-- Classic Minesweeper gameplay (left-click reveal, right-click flag)
-- Three difficulty levels (Easy, Medium, Hard) + Custom
-- Timer (score = time elapsed while playing)
-- Highscores stored locally in 'mines_highscores.json' (top 5 per difficulty)
-- Pause / Resume
-- Replay (Reset) and New Game
-- Jumpscare: shows /mnt/data/valak.jpg in popup and plays jumpscare sound if available
-Run: python minesweeper_with_valak.py
+Refactored Minesweeper GUI — Full version (refactor B)
+- Clean board model using self.board (mines=-1, numbers >=0)
+- self.revealed, self.flagged, self.questioned, self.running
+- Colorized numbers via COLOR_MAP
+- Jumpscare random chance (configurable)
+- Difficulty menu (Easy/Medium/Hard) + custom via dialog
+- Pause / Resume, Replay, Highscores (local JSON)
+
+Run: python minesweeper_gui_full_refactor.py
 """
 
-from Kobar import __init__
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import random
@@ -20,25 +18,8 @@ import json
 import os
 import threading
 
-# Optional dependencies (Pillow for image, playsound for sound)
-HAS_PIL = True
-try:
-    from PIL import Image, ImageTk
-except Exception:
-    HAS_PIL = False
-
-HAS_PLAYSOUND = True
-try:
-    from playsound import playsound
-except Exception:
-    HAS_PLAYSOUND = False
-
 # ---------------- Config ----------------
 HIGHSCORE_FILE = 'mines_highscores.json'
-JUMPSCARE_CHANCE = 0.04  # 4% chance per left-click to trigger jumpscare
-VALAK_IMAGE_PATH = '/mnt/data/valak.jpg'  # uploaded file path (already in container)
-JUMPSCARE_SOUND_CANDIDATES = ['./jumpscare.wav', './jumpscare.mp3']  # search order
-
 DEFAULTS = {
     'Easy': (9, 9, 10),
     'Medium': (16, 16, 40),
@@ -63,13 +44,6 @@ COLOR_MAP = {
     8: "#808080",   # abu
 }
 
-# ---------------- Helpers ----------------
-def find_sound():
-    for p in JUMPSCARE_SOUND_CANDIDATES:
-        if os.path.exists(p):
-            return p
-    return None
-
 # ---------------- Minesweeper Class ----------------
 class Minesweeper:
     def __init__(self, master):
@@ -78,24 +52,6 @@ class Minesweeper:
         self.difficulty = 'Easy'
         self.rows, self.cols, self.mines = DEFAULTS[self.difficulty]
         self.cell_size = 30
-
-        # resources
-        self.valak_large = None
-        self.valak_thumbnail = None
-        self.jumpscare_sound = find_sound()
-        if HAS_PIL and os.path.exists(VALAK_IMAGE_PATH):
-            try:
-                img = Image.open(VALAK_IMAGE_PATH).convert('RGBA')
-                self.valak_large = img  # PIL Image
-                # small thumbnail for tile display (approx)
-                thumb = img.copy()
-                thumb.thumbnail((48, 48), Image.LANCZOS)
-                self.valak_thumbnail = ImageTk.PhotoImage(thumb)
-            except Exception as e:
-                print("Could not load valak image:", e)
-                self.valak_large = None
-                self.valak_thumbnail = None
-
         self.setup_ui()
         self.load_highscores()
         self.new_game()
@@ -257,16 +213,9 @@ class Minesweeper:
             self.hidden[r][c] = False
             b = self.buttons[r][c]
             if self.mined[r][c]:
-                # if valak thumbnail available, show it, else bomb emoji
-                if self.valak_thumbnail:
-                    b.config(image=self.valak_thumbnail, text='')
-                    b.image = self.valak_thumbnail
-                else:
-                    b.config(text=ICONS['bomb'], disabledforeground='red')
+                # show bomb emoji
+                b.config(text=ICONS['bomb'], disabledforeground='red')
                 b.config(relief='sunken')
-                # trigger jumpscare when stepping on a mine
-                # play sound + show image popup (non-blocking)
-                threading.Thread(target=self.show_jumpscare, kwargs={'play_sound': True}, daemon=True).start()
                 return 'mine'
             val = self.adj[r][c]
             if val == 0:
@@ -290,17 +239,11 @@ class Minesweeper:
 
     def on_left(self, r, c):
         if self.game_over or getattr(self,'paused',False): return
-        # maybe random jumpscare before reveal (not on first click to avoid immediate death)
-        # keep first_click behavior as original: mines only planted at first click
+        
         if self.first_click:
             self.plant_mines(r,c)
             self.first_click = False
             self.start_time = time.time()
-
-        # random small jumpscare chance
-        if random.random() < JUMPSCARE_CHANCE:
-            # spawn non-blocking thread for jumpscare (image+sound)
-            threading.Thread(target=self.show_jumpscare, kwargs={'play_sound': True}, daemon=True).start()
 
         res = self.reveal(r,c)
         if res == 'mine':
@@ -316,12 +259,9 @@ class Minesweeper:
             # cycle flag -> question -> hidden
             if not self.flagged[r][c] and not self.questioned[r][c]:
                 self.flagged[r][c] = True
-                # if small valak thumbnail present, show it as flag alternative
-                if self.valak_thumbnail:
-                    self.buttons[r][c].config(image=self.valak_thumbnail, text='')
-                    self.buttons[r][c].image = self.valak_thumbnail
-                else:
-                    self.buttons[r][c].config(text=ICONS['flag'])
+                # show flag emoji
+                self.buttons[r][c].config(text=ICONS['flag'], image='')
+                self.buttons[r][c].image = None
                 self.flags_left -= 1
             elif self.flagged[r][c]:
                 self.flagged[r][c] = False
@@ -350,11 +290,9 @@ class Minesweeper:
         for r in range(self.rows):
             for c in range(self.cols):
                 if self.mined[r][c]:
-                    if self.valak_thumbnail:
-                        self.buttons[r][c].config(image=self.valak_thumbnail, text='')
-                        self.buttons[r][c].image = self.valak_thumbnail
-                    else:
-                        self.buttons[r][c].config(text=ICONS['bomb'])
+                    # show bomb emoji
+                    self.buttons[r][c].config(text=ICONS['bomb'])
+                    self.buttons[r][c].image = None # ensure no image is left
         messagebox.showinfo('Game Over', 'You hit a mine!')
 
     def game_won(self):
@@ -401,65 +339,6 @@ class Minesweeper:
         for i,sc in enumerate(items, start=1):
             s += f'{i}. {sc} sec\n'
         messagebox.showinfo('Highscores', s)
-
-    # ---------------- JUMPSCARE popup + sound ----------------
-    def _play_sound_background(self, sound_path):
-        if not HAS_PLAYSOUND or not sound_path:
-            return
-        try:
-            playsound(sound_path)
-        except Exception as e:
-            print("playsound error:", e)
-
-    def show_jumpscare(self, play_sound=False):
-        # play sound (in its own thread) if requested
-        if play_sound and self.jumpscare_sound and HAS_PLAYSOUND:
-            threading.Thread(target=self._play_sound_background, args=(self.jumpscare_sound,), daemon=True).start()
-
-        # show valak popup if PIL loaded and image exists
-        if HAS_PIL and self.valak_large is not None:
-            try:
-                popup = tk.Toplevel(self.master)
-                popup.attributes('-topmost', True)
-                try:
-                    popup.overrideredirect(True)
-                except Exception:
-                    pass
-                # fit popup to 90% of screen
-                sw = popup.winfo_screenwidth()
-                sh = popup.winfo_screenheight()
-                img = self.valak_large.copy()
-                iw, ih = img.size
-                maxw, maxh = int(sw*0.9), int(sh*0.9)
-                if iw > maxw or ih > maxh:
-                    ratio = min(maxw/iw, maxh/ih)
-                    img = img.resize((int(iw*ratio), int(ih*ratio)), Image.LANCZOS)
-                photo = ImageTk.PhotoImage(img)
-                lbl = tk.Label(popup, image=photo, bg='black')
-                lbl.image = photo
-                lbl.pack()
-                # center popup
-                pw = photo.width()
-                ph = photo.height()
-                x = (sw - pw)//2
-                y = (sh - ph)//2
-                try:
-                    popup.geometry(f'{pw}x{ph}+{x}+{y}')
-                except Exception:
-                    pass
-                # auto close after short time (1.2s)
-                popup.after(1200, popup.destroy)
-            except Exception:
-                try:
-                    messagebox.showwarning('!!!', 'JUMPSCARE!!!')
-                except Exception:
-                    pass
-        else:
-            # fallback alert
-            try:
-                messagebox.showwarning('!!!', 'JUMPSCARE!!!')
-            except Exception:
-                pass
 
 # ---------------- Entry point ----------------
 if __name__ == '__main__':
