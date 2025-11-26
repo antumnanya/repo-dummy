@@ -11,7 +11,6 @@ Features:
 Run: python minesweeper_with_valak.py
 """
 
-from Kobar import __init__
 import tkinter as tk
 from tkinter import simpledialog, messagebox
 import random
